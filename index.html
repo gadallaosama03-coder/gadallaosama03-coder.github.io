@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1366, user-scalable=yes">
+   
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HMI Config">
+  <meta name="theme-color" content="#0F172A">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <title>HMI CONFIGURATOR</title>
+     
+  <link rel="manifest" href="manifest.json"> 
+   
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+   
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="minilogo.png">
+       
+  <style>
+    /* ---------- THEME VARIABLES ---------- */
+    :root {
+      /* --- LIGHT THEME --- */
+      --bg-body: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --primary: #0070E0;
+      --accent: #0284C7;
+      --hover-row: #F1F5F9;
+      --sticky-bg: #FFFFFF;
+      --header-bg: #F8FAFC;
+      --success: #10B981;
+      --empty-cell: #94A3B8;
+    }
+   
+    [data-theme="dark"] {
+      /* --- DARK THEME --- */
+      --bg-body: #0F172A;
+      --bg-card: #1E293B;
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --border: #334155;
+      --primary: #3B82F6;
+      --accent: #38BDF8;
+      --hover-row: #2A3650;
+      --sticky-bg: #1E293B;
+      --header-bg: #1E293B;
+      --empty-cell: #475569;
+    }
+   
+    /* --- GLOBAL STYLE --- */
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background-color: var(--bg-body); 
+      color: var(--text-main); 
+      margin: 0; 
+      padding: 0; 
+      font-size: 14.5px; 
+      transition: background-color 0.3s, color 0.3s;
+      overflow-x: auto; /* Permette lo scroll orizzontale su schermi piccoli */
+      min-height: 100vh;
+      min-width: 1200px; /* Forza larghezza minima per layout desktop */
+      display: flex; flex-direction: column;
+      -webkit-overflow-scrolling: touch; 
+    }
+       
+    .content-wrapper {
+        padding: 24px 32px; 
+        flex: 1;
+        width: 100%;
+        max-width: 1700px;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+   
+    /* --- HEADER --- */
+    .header { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        padding: 12px 32px; 
+        background-color: var(--bg-card);
+        border-bottom: 2px solid var(--border); 
+        gap: 18px;
+        height: 62px; 
+        box-sizing: border-box;
+        position: relative;
+        z-index: 1000;
+        min-width: 1000px; /* Assicura che l'header non si rompa */
+    }
+       
+    .header-left { flex: 0 0 auto; display: flex; align-items: center; gap: 16px; }
+    .mya-logo { height: 29px; width: auto; display: block; } 
+    .advantech-logo { height: 30px; width: auto; display: block; }
+    .logo-divider { width: 1px; height: 20px; background: var(--border); }
+   
+    .header-center { 
+        position: static;
+        transform: none;
+        margin-left: 24px;
+        text-align: left;
+        flex-grow: 1;
+    }
+    .app-title { 
+      font-size: 23px; 
+      font-weight: 900; letter-spacing: 1px; margin: 0; 
+      text-transform: uppercase;
+      background: linear-gradient(to right, #0070E0, #38BDF8, #0070E0);
+      background-size: 200% auto;
+      color: #0070E0;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shine 3s linear infinite;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: transform 0.2s;
+    }
+    .app-title:hover { transform: scale(1.02); }
+    @keyframes shine { to { background-position: 200% center; } }
+   
+    .header-right { flex: 0 0 auto; display: flex; justify-content: flex-end; align-items: center; gap: 12px; position: relative; margin-left: auto; }
+   
+    /* BUTTON STYLES */
+    .theme-toggle, .lang-btn {
+        background: var(--bg-body); border: 2px solid var(--border); color: var(--text-muted);
+        width: 34px; height: 34px; 
+        border-radius: 7px; cursor: pointer; 
+        display: flex; align-items: center; justify-content: center; font-size: 16px;
+        transition: all 0.2s ease; flex-shrink: 0;
+        padding: 0;
+    }
+    .theme-toggle:hover, .lang-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--hover-row); transform: translateY(-2px); }
+   
+    /* LANGUAGE DROPDOWN CSS */
+    .lang-wrapper { position: relative; display: flex; align-items: center; }
+    .lang-menu {
+        display: none; position: absolute; top: 120%; right: 0; 
+        width: 200px; background: var(--bg-card); border: 2px solid var(--border); 
+        border-radius: 10px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); 
+        z-index: 3000; overflow: hidden; padding: 5px 0;
+        max-height: 400px; overflow-y: auto;
+    }
+    .lang-menu.show { display: block; animation: fadeIn 0.2s ease; }
+    .lang-item {
+        padding: 10px 15px; font-size: 13px; font-weight: 600; 
+        color: var(--text-main); cursor: pointer; display: flex; align-items: center; 
+        gap: 10px; transition: background 0.2s; border-bottom: 1px solid var(--border);
+    }
+    .lang-item:last-child { border-bottom: none; }
+    .lang-item:hover { background: var(--hover-row); color: var(--primary); }
+
+    /* SEARCH */
+    .search-wrapper { position: relative; width: 280px; } 
+    .search-input { 
+      background: var(--bg-body); border: 2px solid var(--border); color: var(--text-main);
+      padding: 0 14px; border-radius: 7px; width: 100%; outline: none;
+      font-family: 'Inter', sans-serif; transition: 0.2s; box-sizing: border-box; font-size: 13px; height: 34px; 
+    }
+    .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3); }
+   
+    .text-metallic-blue {
+        background: linear-gradient(to bottom, #60a5fa, #2563eb, #1d4ed8);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px;
+    }
+   
+    #search-suggestions-box {
+        display: none; position: absolute; top: 100%; left: 0; width: 100%;
+        background: var(--bg-card); border: 2px solid var(--border);
+        border-radius: 10px; max-height: 360px; overflow-y: auto;
+        z-index: 2000; margin-top: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    }
+    .suggestion-item { padding: 10px 16px; cursor: pointer; color: var(--text-muted); font-size: 13px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .suggestion-item:hover { background: var(--hover-row); }
+    .suggestion-item strong { color: var(--text-main); font-size: 14px; }
+   
+    .btn-help { 
+      background: transparent; border: 2px solid var(--border); color: var(--text-muted);
+      padding: 0 16px; border-radius: 7px; cursor: pointer; font-weight: 700; font-size: 12px;
+      transition: 0.2s; height: 34px; display: flex; align-items: center; flex-shrink: 0; 
+    }
+    .btn-help:hover { border-color: var(--primary); color: var(--primary); }
+   
+    #help-banner {
+        display: none; position: absolute; top: 55px; right: 0; width: 290px;
+        background: var(--bg-card); border: 2px solid var(--border); padding: 22px;
+        border-radius: 12px; box-shadow: 0 30px 80px rgba(0,0,0,0.6); z-index: 2000;
+    }
+    #help-banner h3 { margin: 0 0 12px 0; color: var(--primary); border-bottom: 2px solid var(--border); padding-bottom: 8px; font-size: 15px; }
+    #help-banner ul { padding-left: 18px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px; font-size: 13px; }
+    .contact-link { display: block; text-align: center; background: var(--primary); color: white; text-decoration: none; padding: 10px; border-radius: 8px; font-weight: 700; font-size: 13px; }
+   
+    /* LANDING PAGE */
+    #landing-page {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        min-height: 60vh; text-align: center; animation: fadeIn 0.5s ease-out;
+    }
+    .landing-title { font-size: 22px; font-weight: 800; margin-bottom: 35px; color: var(--text-main); letter-spacing: 1px; }
+    .landing-cards { display: flex; gap: 25px; justify-content: center; width: 100%; max-width: 750px; }
+    .landing-card {
+        flex: 1; max-width: 320px; background: var(--bg-card); border: 2px solid var(--border);
+        border-radius: 18px; padding: 35px 18px; cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        display: flex; flex-direction: column; align-items: center; gap: 18px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05); position: relative; overflow: hidden;
+    }
+    .landing-card::before {
+        content: ''; position: absolute; top:0; left:0; width:100%; height:100%;
+        background: linear-gradient(135deg, var(--primary), transparent);
+        opacity: 0; transition: opacity 0.4s; z-index: 0;
+    }
+    .landing-card:hover { transform: translateY(-8px) scale(1.01); border-color: var(--primary); box-shadow: 0 20px 50px rgba(0, 112, 224, 0.15); }
+    .landing-card:hover::before { opacity: 0.05; }
+    .landing-icon { width: 54px; height: 54px; color: var(--text-muted); z-index: 1; transition: 0.4s; }
+    .landing-card:hover .landing-icon { color: var(--primary); transform: scale(1.1); }
+    .landing-label { font-size: 16px; font-weight: 800; color: var(--text-main); z-index: 1; text-transform: uppercase; }
+       
+    #main-app-container { display: none; animation: slideUp 0.5s ease-out; width: 100%; }
+    @keyframes slideUp { from { opacity:0; transform: translateY(30px); } to { opacity:1; transform: translateY(0); } }
+   
+    /* CONTROLS */
+    .controls { background: var(--bg-card); padding: 22px; border-radius: 14px; border: 2px solid var(--border); margin-bottom: 22px; position: relative; z-index: 500; }
+    .controls-header { display: flex; justify-content: space-between; margin-bottom: 18px; align-items: center; flex-wrap: wrap; gap: 14px; }
+    .controls-title { font-size: 14px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin: 0; letter-spacing: 1px; }
+    .controls-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+       
+    .sort-select {
+        background: var(--bg-body); color: var(--text-muted); border: 2px solid var(--border);
+        padding: 9px 14px; border-radius: 8px; font-family: 'Inter', sans-serif; 
+        outline: none; cursor: pointer; font-size: 13px; font-weight: 600; min-width: 140px;
+    }
+   
+    .btn-apply { background: var(--primary); color: white; border: none; padding: 9px 20px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 800; transition: 0.2s; }
+    .btn-apply:hover { background: #2563eb; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3); }
+    .btn-reset { background: var(--border); color: var(--text-main); border: none; padding: 9px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; transition: 0.2s; }
+    .btn-reset:hover { background: var(--text-muted); color: white; }
+   
+    /* EXPORT */
+    .export-wrapper { position: relative; display: inline-block; margin-right: 4px; }
+    .btn-export {
+        background: transparent; border: 2px solid var(--border); color: var(--text-muted);
+        width: 36px; height: 36px; border-radius: 8px; cursor: pointer; 
+        display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+    }
+    .btn-export svg { width: 18px; height: 18px; }
+    .btn-export:hover { border-color: var(--primary); color: var(--primary); background: var(--hover-row); }
+    .export-menu {
+        display: none; position: absolute; top: 115%; right: 0;
+        background: var(--bg-card); border: 2px solid var(--border); border-radius: 10px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.3); z-index: 1000; min-width: 160px; overflow: hidden;
+    }
+    .export-menu.show { display: block; animation: fadeIn 0.2s; }
+    .export-item { padding: 12px 18px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-bottom: 1px solid var(--border); }
+   
+    /* FILTERS GRID & DROPDOWNS */
+    .filters-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+    .filter-item { flex-grow: 1; min-width: 150px; max-width: 220px; position: relative; }
+    .filter-label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 6px; font-weight: 700; text-transform: uppercase; }
+       
+    .multiselect-btn { width: 100%; padding: 10px 12px; background: var(--bg-body); border: 2px solid var(--border); border-radius: 8px; color: var(--text-main); text-align: left; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; align-items: center; font-weight: 500; }
+    .multiselect-content { display: none; position: absolute; top: 100%; left: 0; width: 100%; background: var(--bg-card); border: 2px solid var(--border); z-index: 100; max-height: 280px; overflow-y: auto; border-radius: 8px; margin-top: 6px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); }
+    .multiselect-content.show { display: block; }
+    
+    .multiselect-option, .select-all-option { 
+        padding: 10px 14px; 
+        display: flex; 
+        align-items: center; 
+        border-bottom: 1px solid var(--border); 
+        cursor: pointer; 
+        font-size: 13px; 
+        color: var(--text-main);
+        transition: background 0.15s;
+    }
+    .multiselect-option:hover, .select-all-option:hover { background: var(--hover-row); }
+    .select-all-option { border-bottom: 2px solid var(--border); font-weight: 700; color: var(--accent); background: rgba(0,0,0,0.02); }
+    .multiselect-option input, .select-all-option input { margin-right: 12px; accent-color: var(--primary); cursor: pointer; width: 16px; height: 16px; border-radius: 4px; }
+   
+    .add-filter-container { margin-left: auto; position: relative; }
+
+    /* TABLE & SCROLL */
+    .table-wrapper { position: relative; margin-bottom: 40px; overflow: hidden; border-radius: 12px; }
+    .table-container { border: 2px solid var(--border); overflow-x: auto; background: var(--bg-card); scroll-behavior: auto; }
+    .scroll-btn {
+        position: absolute; top: 0; bottom: 0; width: 50px;
+        border: none; color: white; font-size: 28px; font-weight: bold;
+        cursor: e-resize; display: flex; align-items: center; justify-content: center;
+        z-index: 100; opacity: 0; transition: opacity 0.3s ease;
+    }
+    .table-wrapper:hover .scroll-btn { opacity: 0.2; }
+    .scroll-btn:hover { opacity: 1 !important; cursor: w-resize; }
+    .scroll-left { left: 0; background: linear-gradient(to right, rgba(0,0,0,0.9), transparent); }
+    .scroll-right { right: 0; background: linear-gradient(to left, rgba(0,0,0,0.9), transparent); }
+   
+    table { width: 100%; border-collapse: collapse; border: none; border-spacing: 0; }
+    th { background: var(--header-bg); color: var(--text-muted); padding: 15px; text-align: left; font-weight: 700; font-size: 10px; border-bottom: none !important; white-space: nowrap; text-transform: uppercase; letter-spacing: 1px; }
+    td { padding: 13px 15px; border-bottom: none !important; font-size: 13.5px; color: var(--text-main); white-space: nowrap; vertical-align: middle; }
+    tr:hover { background: var(--hover-row); }
+    
+    .empty-val {
+        color: var(--empty-cell);
+        font-weight: 500;
+        font-size: 13px;
+        user-select: none;
+        opacity: 0.8;
+        display: inline-block;
+        width: 100%;
+        text-align: center;
+    }
+       
+    td span.semantic-tag {
+        white-space: normal;
+        max-width: 180px;
+        line-height: 1.3;
+        text-align: left;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        font-weight: 700 !important;
+        font-size: 12.5px !important;
+    }
+    
+    .cpu-cell { font-weight: 600; text-align: left; letter-spacing: 0.3px; }
+
+    /* Sticky Details */
+    th:last-child, td:last-child { 
+        position: sticky; right: 0; 
+        background-color: var(--sticky-bg); border-left: 2px solid var(--border); 
+        text-align: center; padding: 13px 18px; z-index: 40; 
+        box-shadow: -5px 0 20px rgba(0,0,0,0.1); 
+    }
+    th:last-child { background-color: var(--header-bg); z-index: 41; }
+    tr:hover td:last-child { background-color: var(--hover-row); }
+       
+    .status-tag { font-weight: 800; padding: 5px 10px; border-radius: 5px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+       
+    .pn-cell { font-weight: 800; display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-main); font-size: 13.5px; }
+    .pn-link { color: inherit; text-decoration: none; flex-grow: 1; transition: color 0.2s; }
+    .pn-link:hover { color: var(--accent); text-decoration: underline; }
+       
+    .btn-copy-pn {
+        background: transparent; border: none; cursor: pointer;
+        color: var(--border); padding: 4px; border-radius: 4px;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.2s; opacity: 0; 
+    }
+    .pn-cell:hover .btn-copy-pn { opacity: 1; } 
+    .btn-copy-pn:hover { color: var(--primary); background: var(--hover-row); }
+    .btn-copy-pn svg { width: 14px; height: 14px; }
+
+    .action-btn { background: transparent; border: 2px solid var(--primary); color: var(--primary); padding: 5px 12px; border-radius: 7px; cursor: pointer; font-weight: 700; font-size: 11px; transition: 0.2s; }
+    .action-btn:hover { background: var(--primary); color: white; }
+       
+    #loading { display: flex; justify-content: center; align-items: center; margin-top: 90px; min-height: 180px; flex-direction: column; }
+    .loading-spinner {
+      width: 45px; height: 45px; border: 4px solid rgba(0, 112, 224, 0.1);
+      border-left-color: var(--primary); border-radius: 50%;
+      animation: spin 1s cubic-bezier(0.6, -0.28, 0.735, 0.045) infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+   
+    .error-box { 
+        display: none; background: rgba(239, 68, 68, 0.1); 
+        border: 2px solid #DC2626; color: #EF4444; 
+        padding: 35px; margin: 35px auto; max-width: 750px; 
+        border-radius: 14px; text-align: center; font-size: 16px; 
+        box-shadow: 0 20px 50px rgba(0,0,0,0.2); z-index: 9999; position: relative;
+    }
+    .error-title { font-size: 22px; font-weight: 800; margin-bottom: 12px; display:block; }
+   
+    /* --- MODAL (ALWAYS WHITE FIX) --- */
+    .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index: 9000; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
+       
+    /* MODIFICA 2: Stile Finestra Desktop Forzato */
+    .modal-window { 
+        background: #FFFFFF !important; 
+        width: 85%; 
+        max-width: 1200px; 
+        min-width: 600px; /* Evita che diventi troppo stretta */
+        height: 85%; 
+        max-height: 900px;
+        border-radius: 20px; 
+        display: flex; flex-direction: column; 
+        border: 2px solid #E2E8F0 !important; 
+        box-shadow: 0 35px 90px rgba(0,0,0,0.8);
+        color: #0F172A !important; 
+        margin: auto; /* Centratura */
+    }
+    .modal-header { 
+        padding: 25px; border-bottom: 2px solid #E2E8F0 !important; 
+        display: flex; justify-content: space-between; align-items: center;
+        color: #0F172A !important; 
+    }
+    .modal-body { padding: 35px; overflow-y: auto; color: #64748B !important; }
+       
+    .modal-window h2, .modal-window h4 { color: #0F172A !important; }
+    .close-modal { color: #0F172A !important; }
+   
+    .detail-section-title {
+        font-size: 14px; font-weight: 800; color: #0070E0; 
+        border-bottom: 2px solid #E2E8F0; padding-bottom: 8px; margin-bottom: 15px; margin-top: 25px;
+        text-transform: uppercase; letter-spacing: 0.5px;
+    }
+       
+    .detail-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 12px;
+    }
+   
+    .detail-card-value {
+        background: #F8FAFC; 
+        border: 1px solid #E2E8F0;
+        border-radius: 6px; 
+        padding: 10px 14px;
+        display: flex; flex-direction: column; justify-content: center;
+        transition: all 0.2s ease;
+    }
+    .detail-card-value:hover { border-color: #CBD5E1; }
+   
+    .detail-label-small {
+        font-size: 11px; color: #64748B; font-weight: 700;
+        text-transform: uppercase; margin-bottom: 4px;
+    }
+    .detail-value-text {
+        font-size: 13.5px; color: #0F172A; font-weight: 600;
+        line-height: 1.4;
+    }
+   
+    .detail-simple-tag {
+        background: #FFFFFF;
+        border: 1px solid #E2E8F0;
+        color: #334155;
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.2s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .detail-simple-tag:hover {
+        border-color: #94A3B8;
+        background: #F8FAFC;
+    }
+       
+    .modal-container-grid { display: grid; gap: 40px; margin-top: 25px; align-items: start; height: 100%; }
+    .modal-layout-split { grid-template-columns: 400px 1fr; }
+    .modal-layout-full { grid-template-columns: 1fr; }
+    .modal-product-img { max-width: 100%; max-height: 350px; object-fit: contain; filter: drop-shadow(0 10px 30px rgba(0,0,0,0.2)); transition: transform 0.4s ease; }
+    .modal-preview-card:hover .modal-product-img { transform: scale(1.1); }
+   
+    .modal-comment-box {
+        margin-top: 20px;
+        padding: 16px;
+        background: #F0F9FF;
+        border-left: 4px solid #0284C7;
+        color: #0F172A;
+        font-size: 13.5px;
+        line-height: 1.5;
+        border-radius: 0 8px 8px 0;
+        font-style: italic;
+    }
+    .modal-comment-title {
+        font-weight: 800;
+        color: #0070E0;
+        font-size: 11px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        display: block;
+    }
+   
+    #toast { visibility: hidden; min-width: 250px; background-color: #10B981; color: #fff; text-align: center; border-radius: 8px; padding: 14px; position: fixed; z-index: 10000; left: 50%; bottom: 40px; transform: translateX(-50%); font-weight: 700; font-size: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+    #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+    @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 40px; opacity: 1;} }
+    @keyframes fadeout { from {bottom: 40px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+
+    /* MODIFICA 3: RIMOSSO IL BLOCCO @media (max-width: 900px) per forzare il layout desktop */
+
+    .header-center {
+        position: static;
+        transform: none;
+        margin-left: 24px;
+        text-align: left;
+        flex-grow: 1;
+    }
+    .header-right { margin-left: auto; }
+    /* L'header mantiene il layout flex anche su mobile */
+    .header { flex-wrap: nowrap; min-width: 800px; } 
+  </style>
+</head>
+<body>
+   
+  <div class="header">
+    <div class="header-left">
+        <a href="https://mya.advantech.com/" target="_blank" class="logo-link">
+            <img src="MyA.png" alt="MyA" class="mya-logo" onerror="this.style.display='none';"> 
+        </a>
+        <div class="logo-divider"></div>
+        <a href="https://www.advantech.eu" target="_blank" class="logo-link">
+            <img src="logo.png" alt="Advantech" class="advantech-logo" onerror="this.style.display='none';"> 
+        </a>
+    </div>
+       
+    <div class="header-center">
+      <h1 class="app-title" onclick="returnToHome()" title="Return to Selection">HMI CONFIGURATOR</h1>
+    </div>
+       
+    <div class="header-right">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Switch Theme">☀</button>
+        </div>
+
+        <div class="search-wrapper">
+            <input type="text" id="pn-search" class="search-input" placeholder="Search P/N..." autocomplete="off">
+            <div id="search-suggestions-box"></div>
+        </div>
+
+      
+        <div id="help-banner">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3>Quick Guide</h3>
+            <span onclick="toggleHelp()" style="cursor:pointer; font-size:24px;">&times;</span>
+            </div>
+            <ul>
+            <li><b>Smart Search:</b> Typespaces or symbols (e.g. "PPC 318" finds "PPC-318").</li>
+            <li><b>Filters:</b> Click "Customize Filters" to add more options. Select All selects everyone.</li>
+            <li><b>Links:</b> Click P/N for Product Page.</li>
+            </ul>
+            <a href="mailto:Osama.GadAlla@advantech.it?subject=MYADVANTECHER - HELP" class="contact-link">
+            ✉ Contact Support
+            </a>
+        </div>
+    </div>
+  </div>
+   
+  <div class="content-wrapper">
+      <div id="error-box" class="error-box"></div>
+       
+      <div id="loading">
+          <div class="loading-spinner"></div>
+          <div id="loading-text" style="margin-top:18px; font-weight:600; color:var(--text-muted);">Loading ...</div>
+      </div>
+   
+      <div id="landing-page" style="display:none;">
+        <div class="landing-title">SELECT PRODUCT CATEGORY</div>
+        <div class="landing-cards">
+            <div class="landing-card" onclick="selectCategory('monitor')">
+             <svg class="landing-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+             </svg>
+             <div class="landing-label">Industrial Monitor</div>
+            </div>
+            <div class="landing-card" onclick="selectCategory('hmi')">
+            <svg class="landing-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+                <rect x="6" y="6" width="12" height="8"></rect>
+             </svg>
+             <div class="landing-label">Panel PC / HMI</div>
+            </div>
+        </div>
+      </div>
+   
+      <div id="main-app-container">
+          <div class="controls" id="controls" style="display:none;">
+            <div class="controls-header">
+            <h3 class="controls-title">Configuration Filters</h3>
+            <div class="controls-actions">
+                 <select id="sort-order" class="sort-select" onchange="applyFilters()">
+                      <option value="status" selected>Sort: Status</option>
+                      <option value="original">Original Order</option>
+                      <option value="pn_asc">A-Z</option>
+                      <option value="pn_desc">Z-A</option>
+                      <option value="ltb_desc">LTB (New)</option>
+                      <option value="ltb_asc">LTB (Old)</option>
+                  </select>
+   
+                  <div class="export-wrapper">
+                    <button class="btn-export" onclick="toggleExportMenu()" title="Download List">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </button>
+                    <div id="export-menu" class="export-menu">
+                        <div class="export-item" onclick="exportData('xlsx')">Excel (.xlsx)</div>
+                        <div class="export-item" onclick="exportData('csv')">CSV (.csv)</div>
+                        <div class="export-item" onclick="exportData('pdf')">PDF (.pdf)</div>
+                    </div>
+                  </div>
+   
+                  <button class="btn-reset" onclick="resetFilters()">RESET</button>
+                  <button class="btn-apply" onclick="applyFilters()">APPLY FILTERS</button>
+            </div>
+            </div>
+            <div id="filters-container" class="filters-grid"></div>
+          </div>
+   
+          <div class="table-wrapper">
+            <button class="scroll-btn scroll-left" onmouseenter="startScrolling('left')" onmouseleave="stopScrolling()">‹</button>
+              
+            <div class="table-container" id="main-table-container">
+            <table id="data-table">
+              <thead>
+                <tr>
+                    <th>Status</th>
+                    <th>P/N</th>
+                    <th>LTB</th>
+                    <th>Work Environment</th>
+                    <th>Vertical Sector</th>
+                    <th>Product Series</th>
+                    <th>Size</th>
+                    <th>Resolution</th>
+                    <th>CPU</th>
+                    <th>Touch</th>
+                    <th>Max Memory</th>
+                    <th width="110">Details</th>
+                </tr>
+              </thead>
+              <tbody id="table-body"></tbody>
+            </table>
+            </div>
+   
+            <button class="scroll-btn scroll-right" onmouseenter="startScrolling('right')" onmouseleave="stopScrolling()">›</button>
+          </div>
+      </div>
+  </div>
+   
+  <div id="modal-overlay" class="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-window">
+        <div class="modal-header">
+            <h2 id="modal-title" style="margin:0; font-size: 24px;">Product Details</h2>
+            <span class="close-modal" onclick="closeModal()" style="font-size:28px; cursor:pointer;">&times;</span>
+        </div>
+        <div class="modal-body" id="modal-content"></div>
+    </div>
+  </div>
+    
+  <div id="lightbox-overlay" onclick="closeLightbox()" style="display:none;">
+      <div class="lightbox-content">
+          <img id="lightbox-img" src="" alt="Full Screen View">
+      </div>
+  </div>
+   
+  <div id="toast">Copied!</div>
+   
+  <script src="data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
